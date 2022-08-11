@@ -16,7 +16,7 @@ state = {
 
 width, height = 50, 50  # Adjust for width or height of the room
 tiles = [" "," ","x"]  # Replace "A", "B", and "C" with your tile instances
-
+knownTiles = []
 
 
 """
@@ -32,16 +32,20 @@ def floodfill(planet, startX, startY):
         del(xyTuple[0])
         planet[y][x] = '0'
         bombCount = 0
+        uusiLista = []
         for row in range(-1, 2):
          for column in range(-1, 2):
             if (x + column) > -1 and (y + row) > -1 and (y + row < len(planet)) and (x + column < len(planet[0])):    
                 if (planet[row+y][column+x] == 'x'):
                     bombCount += 1
                 elif (planet[row+y][column+x] == ' ' and bombCount == 0):
-                    xyTuple.insert(0, tuple([row+y, column+x]))
-
+                    uusiLista.insert(0, tuple([row+y, column+x]))
         if (bombCount in range (1,9)):
             planet[y][x] = str(bombCount)
+        else:  
+            for koordinaatti in uusiLista:
+                xyTuple.insert(0, koordinaatti)
+
 
 """
 Places N mines to a field in random tiles.
@@ -134,7 +138,7 @@ def main():
         field = askFieldSize()
         mineAmount = askMineAmount(field[0]*field[1])
         createField(field, mineAmount)
-        s.load_sprites("I:\GitHub\elementary_programming\sprites")
+        s.load_sprites(".\sprites")
         s.create_window(len(state["field"][0]) * 40, len(state["field"]) * 40, )
         s.set_draw_handler(draw_field)
         s.set_mouse_handler(handle_mouse)
