@@ -14,8 +14,6 @@ state = {
     "availableCoordinates": [],
 }
 
-width, height = 50, 50  # Adjust for width or height of the room
-tiles = [" "," ","x"]  # Replace "A", "B", and "C" with your tile instances
 knownTiles = []
 
 
@@ -58,6 +56,7 @@ def place_mines(field, availableCoordinates, mineAmount):
         y = availableCoordinates[index][1]
         if (field[x][y]) != 'x':
             field[x][y] = 'x'
+            state["availableCoordinates"].remove((x,y))
             count = count + 1 
 
 """
@@ -71,6 +70,8 @@ def draw_field():
     s.begin_sprite_draw()
     for j in range(len(state["field"])):
         for i, key in enumerate(state["field"][j]):
+            if key == 'x': 
+                key = ' '
             s.prepare_sprite(key, i*40, j*40)
     s.draw_sprites()
     
@@ -79,12 +80,20 @@ This function is called when a mouse button is clicked inside the game window.
 Prints the position and clicked button of the mouse to the terminal.
 """
 def handle_mouse(x, y, mButton, modit):
+    print(state["availableCoordinates"])
     if mButton == s.MOUSE_LEFT:
+        if (int(y/40), int(x/40)) not in state["availableCoordinates"]:
+            print('moi')
         mButton = thisdict[s.MOUSE_LEFT]
         floodfill(state["field"], int(x/40), int(y/40))
         s.set_draw_handler(draw_field)
     elif mButton == s.MOUSE_RIGHT:
         mButton = thisdict[s.MOUSE_RIGHT]
+        if (state["field"][int(y/40)][int(x/40)] == ' '):
+            state["field"][int(y/40)][int(x/40)] = 'f'
+        elif (state["field"][int(y/40)][int(x/40)] == 'f'):
+            state["field"][int(y/40)][int(x/40)] = ' '
+        s.set_draw_handler(draw_field)
     elif mButton == s.MOUSE_MIDDLE:
         mButton = thisdict[s.MOUSE_MIDDLE]
     print("The " + str(mButton) + " mouse button was pressed at " + str(int(x/40)) + ", " + str(int(y/40)))
@@ -129,20 +138,45 @@ def createField(fieldSize, mineAmount):
     state["availableCoordinates"] = availableCoordinates
     place_mines(state["field"], state["availableCoordinates"], mineAmount)
 
+def printMenu():
+    print("\n1. Start a new game")
+    print("2. View statistics")
+    print("3. Quit")
+    while True:
+        try:
+            option = int(input('\nEnter your choice: ')) 
+            if option > 0 and option <= 2:
+                return option
+            elif option == 3:
+                print("Thank you for playing!")
+                break    
+        except ValueError:
+            print ("You must enter a number")
+        else:
+            print("Enter a number between 1-3")
+
+    
+
 """
 Loads the game graphics, creates a game window, and sets a draw handler
 """
 def main():
     while True:
-
-        field = askFieldSize()
-        mineAmount = askMineAmount(field[0]*field[1])
-        createField(field, mineAmount)
-        s.load_sprites(".\sprites")
-        s.create_window(len(state["field"][0]) * 40, len(state["field"]) * 40, )
-        s.set_draw_handler(draw_field)
-        s.set_mouse_handler(handle_mouse)
-        s.start()
+        menuChoice = printMenu()
+        if menuChoice == 1:
+            field = askFieldSize()
+            mineAmount = askMineAmount(field[0]*field[1])
+            createField(field, mineAmount)
+            s.load_sprites(".\sprites")
+            s.create_window(len(state["field"][0]) * 40, len(state["field"]) * 40, )
+            s.set_draw_handler(draw_field)
+            s.set_mouse_handler(handle_mouse)
+            s.start()
+        elif menuChoice == 2:
+            print("Statistics")
+            break
+        else:
+            break
 
 
 if __name__ == "__main__":
