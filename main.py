@@ -12,12 +12,8 @@ thisdict = {
 
 state = {
     "field": [],
-}
-state = {
     "availableCoordinates": [],
 }
-
-knownTiles = []
 
 statistics = {
     "outcome": "lost",
@@ -26,7 +22,9 @@ statistics = {
     "turns": 0,
     "flagAmount": 0,
     "safeTilesLeft": 0,
-    "gameEnded": False
+    "gameEnded": False,
+    "minesLeft": 0
+
 }
 
 
@@ -42,7 +40,6 @@ def floodfill(field, startX, startY):
     if field[startY][startX] == 'x':
         return
     xyTuple = [(startY,startX)]
-    counter = 0
     while len(xyTuple) > 0:
         [y, x] = xyTuple[0]
         del(xyTuple[0])
@@ -126,6 +123,7 @@ def handle_mouse(x, y, mButton, modit):
                 if not any( (' ') in row for row in state["field"]) and ( not any ( ('f') in row for row in state["field"]) or not any ( ('x') in row for row in state["field"]) ):
                     print("\nYou won the game!")
                     statistics["outcome"] = "won"
+                    statistics["minesLeft"] = 0
                     statistics["gameEnded"] = True
             else:
                 print("\nYou lost the game!")
@@ -142,14 +140,17 @@ def handle_mouse(x, y, mButton, modit):
             state["field"][int(y/40)][int(x/40)] = 'f'
         elif ( checkFlagCoordinate == 'f' and ( int(y/40), int(x/40) ) not in state["availableCoordinates"]):
             statistics["flagAmount"] += 1
+            statistics["minesLeft"] += 1
             state["field"][int(y/40)][int(x/40)] = 'x'
         elif (checkFlagCoordinate == 'f'):
             statistics["flagAmount"] += 1
             state["field"][int(y/40)][int(x/40)] = ' '
         elif (checkFlagCoordinate == 'x'):
             statistics["flagAmount"] -= 1
+            statistics["minesLeft"] -= 1
             state["field"][int(y/40)][int(x/40)] = 'f'
         print('\nYou have {} flags left'.format(statistics["flagAmount"]))
+        print(statistics["minesLeft"])
         s.set_draw_handler(draw_field)
 
 """
@@ -160,14 +161,14 @@ Returns size of the playable field
 def askFieldSize():
     while True:
         playerInput = input("\nGive minesweeper game field size (for example 10x10): ")
-        if "x" in playerInput and playerInput > "0":
-            fieldSize = playerInput.split("x", 1)
-            fieldSize[0] = int(fieldSize[0])
-            fieldSize[1] = int(fieldSize[1])
-            if (fieldSize[0] > 0 and fieldSize[1] > 0 ):
-                return fieldSize
-            else:
-                print("\nField size must be greater than 0")
+        fieldSize = playerInput.split("x", 1)
+        if "x" in playerInput:
+                fieldSize[0] = int(fieldSize[0])
+                fieldSize[1] = int(fieldSize[1])
+                if (fieldSize[0] > 0 and fieldSize[1] > 0 ):
+                    return fieldSize
+                else:
+                    print("\nField size must be greater than 0")
         else:
             print("\nInput format must be \"number x number\" ")
 
@@ -183,6 +184,7 @@ def askMineAmount(field):
         try:
             playerInput = int(input("\nGive mine amount: "))
             if playerInput < field and playerInput > 0:
+                statistics["minesLeft"] = playerInput
                 return playerInput
             else:
                 print('\nMine amount must be bigger than 0 or smaller than given field size')
@@ -246,7 +248,7 @@ def textFileHandler(mode):
         minutes = math.floor(statistics["time"] / 60)
         seconds = math.floor(statistics["time"] % 60)
         with open('statistics.txt', "a") as file:
-            file.write("\nGame was played on {}, it lasted {} minutes and {} seconds, there were {} turns and player {} the game".format(statistics["date"], str(minutes), str(seconds), statistics["turns"], statistics["outcome"]))
+            file.write("\nGame was played on {}, it lasted {} minutes and {} seconds, there were {} turns, {} mines were left on the field and player {} the game".format(statistics["date"], str(minutes), str(seconds), statistics["turns"], statistics["minesLeft"], statistics["outcome"]))
     if mode == "read":
 
         try:
@@ -284,7 +286,7 @@ def main():
             s.create_window(len(state["field"][0]) * 40, len(state["field"]) * 40, )
             s.set_draw_handler(draw_field)
             s.set_mouse_handler(handle_mouse)
-            statistics["date"] = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+            statistics["date"] = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
             statistics["time"] = time.time()
             s.start()
             textFileHandler("write")
