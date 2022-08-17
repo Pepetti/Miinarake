@@ -1,7 +1,7 @@
 import sweeperlib as s
 import random
 import math
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 
 thisdict = {
@@ -20,48 +20,57 @@ state = {
 knownTiles = []
 
 statistics = {
-    "outcome": "won",
+    "outcome": "lost",
     "date": None,
     "time": 0,
     "turns": 0,
     "flagAmount": 0,
     "safeTilesLeft": 0,
+    "gameEnded": False
 }
 
 
 """
 Marks previously unknown connected areas as safe, starting from the given
 x, y coordinates.
+
+:param list field = two dimensional list containing game field
+:param int startX = starting point (mouse click) for X coordinate
+:param int startY = starting point (mouse click) for Y coordinate
 """
-def floodfill(planet, startX, startY):
-    if planet[startY][startX] == 'x':
+def floodfill(field, startX, startY):
+    if field[startY][startX] == 'x':
         return
     xyTuple = [(startY,startX)]
     counter = 0
     while len(xyTuple) > 0:
         [y, x] = xyTuple[0]
         del(xyTuple[0])
-        planet[y][x] = '0'
+        field[y][x] = '0'
         bombCount = 0
-        uusiLista = []
+        newList = []
         for row in range(-1, 2):
          for column in range(-1, 2):
-            if (x + column) > -1 and (y + row) > -1 and (y + row < len(planet)) and (x + column < len(planet[0])):
-                if (planet[row+y][column+x] == 'x'):
+            if (x + column) > -1 and (y + row) > -1 and (y + row < len(field)) and (x + column < len(field[0])):
+                if (field[row+y][column+x] == 'x'):
                     bombCount += 1
-                elif (planet[row+y][column+x] == 'f'):
+                elif (field[row+y][column+x] == 'f'):
                     if (tuple([row+y, column+x]) not in state["availableCoordinates"]):
                        bombCount += 1
-                elif (planet[row+y][column+x] == ' ' and bombCount == 0):
-                    uusiLista.insert(0, tuple([row+y, column+x]))
+                elif (field[row+y][column+x] == ' ' and bombCount == 0):
+                    newList.insert(0, tuple([row+y, column+x]))
         if (bombCount in range (1,9)):
-            planet[y][x] = str(bombCount)
+            field[y][x] = str(bombCount)
         else:
-            for koordinaatti in uusiLista:
-                xyTuple.insert(0, koordinaatti)
+            for coordinate in newList:
+                xyTuple.insert(0, coordinate)
 
 """
 Places N mines to a field in random tiles.
+
+:param list field = two dimensional list containing game field
+:param list availableCoordinates = coordinates which doesn't include bomb
+:param int mineAmount = mine amount asked from the player
 """
 def place_mines(field, availableCoordinates, mineAmount):
     statistics["safeTilesLeft"] = len(field) * len(field[0]) - mineAmount
@@ -74,7 +83,7 @@ def place_mines(field, availableCoordinates, mineAmount):
         if (field[x][y]) != 'x':
             field[x][y] = 'x'
             state["availableCoordinates"].remove((x,y))
-            count = count + 1
+            count += 1
 
 
 """
@@ -88,18 +97,20 @@ def draw_field():
     s.begin_sprite_draw()
     for j in range(len(state["field"])):
         for i, key in enumerate(state["field"][j]):
-            ##if key == 'x' and statistics["outcome"] != "lost":
-            ##    key = ' '
+            if key == 'x' and statistics["gameEnded"] == False:
+                key = ' '
             s.prepare_sprite(key, i*40, j*40)
-    print(statistics["safeTilesLeft"])
     s.draw_sprites()
     
 """
 This function is called when a mouse button is clicked inside the game window.
-Prints the position and clicked button of the mouse to the terminal.
+
+:param int x = x point (mouse click) for X coordinate
+:param int y = y point (mouse click) for X coordinate
+:param int mButton = left, right or middle mouse button
 """
 def handle_mouse(x, y, mButton, modit):
-    if statistics["outcome"] == "lost":
+    if statistics["gameEnded"] == True:
         s.close()
         return
     checkFlagCoordinate = state["field"][int(y/40)][int(x/40)]
@@ -113,12 +124,18 @@ def handle_mouse(x, y, mButton, modit):
                 floodfill(state["field"], int(x/40), int(y/40) )
                 s.set_draw_handler(draw_field)
                 if not any( (' ') in row for row in state["field"]) and ( not any ( ('f') in row for row in state["field"]) or not any ( ('x') in row for row in state["field"]) ):
-                    print("You won the game!")
+                    print("\nYou won the game!")
+                    statistics["outcome"] = "won"
+                    statistics["gameEnded"] = True
             else:
+                print("\nYou lost the game!")
                 statistics["outcome"] = "lost"
+                statistics["gameEnded"] = True
                 s.set_draw_handler(draw_field)
 
     elif mButton == s.MOUSE_RIGHT:
+        if (statistics["flagAmount"] < 0):
+            return
         mButton = thisdict[s.MOUSE_RIGHT]
         if (checkFlagCoordinate == ' '):
             statistics["flagAmount"] -= 1
@@ -132,15 +149,17 @@ def handle_mouse(x, y, mButton, modit):
         elif (checkFlagCoordinate == 'x'):
             statistics["flagAmount"] -= 1
             state["field"][int(y/40)][int(x/40)] = 'f'
-        print('You have {} flags left'.format(statistics["flagAmount"]))
+        print('\nYou have {} flags left'.format(statistics["flagAmount"]))
         s.set_draw_handler(draw_field)
 
 """
 Ask field size from the player
+
+Returns size of the playable field
 """
 def askFieldSize():
     while True:
-        playerInput = input("Give minesweeper game field size (for example 10x10): ")
+        playerInput = input("\nGive minesweeper game field size (for example 10x10): ")
         if "x" in playerInput and playerInput > "0":
             fieldSize = playerInput.split("x", 1)
             fieldSize[0] = int(fieldSize[0])
@@ -148,26 +167,33 @@ def askFieldSize():
             if (fieldSize[0] > 0 and fieldSize[1] > 0 ):
                 return fieldSize
             else:
-                print("Field size must be greater than 0")
+                print("\nField size must be greater than 0")
         else:
-            print("Input format must be \"number x number\" ")
+            print("\nInput format must be \"number x number\" ")
 
 """
 Ask mine amount from the user 
+
+Returns amoount of the mines
+
+:param list field = two dimensional list containing game field
 """
 def askMineAmount(field):
     while True:
         try:
-            playerInput = int(input("Give mine amount: "))
+            playerInput = int(input("\nGive mine amount: "))
             if playerInput < field and playerInput > 0:
                 return playerInput
             else:
-                print('Mine amount must be bigger than 0 or smaller than given field size')
+                print('\nMine amount must be bigger than 0 or smaller than given field size')
         except ValueError:
-            print('You must enter a number!')
+            print('\nYou must enter a number!')
 
 """
 Create field and available coordinates from the given fieldSize 
+
+:param int fieldSize = size of the playable field
+:param int mineAmount = amoount of the mines
 """
 def createField(fieldSize, mineAmount):
     field = []
@@ -185,6 +211,13 @@ def createField(fieldSize, mineAmount):
     state["availableCoordinates"] = availableCoordinates
     place_mines(state["field"], state["availableCoordinates"], mineAmount)
 
+
+"""
+Prints the menu of available options when player starts the program
+
+Return player selection
+
+"""
 def printMenu():
     while True:
         print("\n1. Start a new game")
@@ -195,13 +228,18 @@ def printMenu():
             if option > 0 and option <= 2:
                 return option
             elif option == 3:
-                print("Thank you for playing!")
+                print("\nThank you for playing!")
                 break    
         except ValueError:
-            print ("You must enter a number!")
+            print ("\nYou must enter a number!")
         else:
-            print("Enter a number between 1-3")
+            print("\nEnter a number between 1-3")
 
+"""
+Writes or reads statistics to user
+
+:param string mode = read or write to file 
+"""
 def textFileHandler(mode):
     if mode == "write":
         statistics["time"] = time.time() - statistics["time"]
@@ -217,20 +255,28 @@ def textFileHandler(mode):
                 for line in lines:
                     print (line)
         except FileNotFoundError:
-            print('Statistics file not found')
+            print('\nStatistics file not found')
     
 
 """
 Loads the game graphics, creates a game window, and sets a draw handler
 """
 def main():
+    print('''
+███╗░░░███╗██╗███╗░░██╗███████╗  ██████╗░░█████╗░██╗░░██╗███████╗
+████╗░████║██║████╗░██║██╔════╝  ██╔══██╗██╔══██╗██║░██╔╝██╔════╝
+██╔████╔██║██║██╔██╗██║█████╗░░  ██████╔╝███████║█████═╝░█████╗░░
+██║╚██╔╝██║██║██║╚████║██╔══╝░░  ██╔══██╗██╔══██║██╔═██╗░██╔══╝░░
+██║░╚═╝░██║██║██║░╚███║███████╗  ██║░░██║██║░░██║██║░╚██╗███████╗
+╚═╝░░░░░╚═╝╚═╝╚═╝░░╚══╝╚══════╝  ╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝╚══════╝
+        ''')
     while True:
         menuChoice = printMenu()
         if menuChoice == 1:
-            statistics["outcome"] = "won"
+            statistics["outcome"] = "lost"
+            statistics["gameEnded"] = False
             statistics["time"] = time.localtime()
             statistics["turns"] = 0
-
             field = askFieldSize()
             mineAmount = askMineAmount(field[0]*field[1])
             createField(field, mineAmount)
