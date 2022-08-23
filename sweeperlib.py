@@ -318,7 +318,6 @@ def prepare_sprite(key, x, y):
     :param int x: bottom left x coordinate
     :param int y: bottom left y coordinate
     """
-
     graphics["sprites"].append(pyglet.sprite.Sprite(
         graphics["images"][str(key).lower()],
         x,

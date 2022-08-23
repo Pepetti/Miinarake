@@ -167,6 +167,12 @@ def askFieldSize():
                 return fieldSize
             else:
                 print("\nField size must be greater than 0")
+                fieldSize[0] = int(fieldSize[0])
+                fieldSize[1] = int(fieldSize[1])
+                if (fieldSize[0] > 0 and fieldSize[1] > 0 ):
+                    return fieldSize
+                else:
+                    print("\nField size must be greater than 0")
         else:
             print("\nInput format must be \"number x number\" ")
 
